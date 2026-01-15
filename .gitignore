@@ -11,6 +11,9 @@ output*.md
 test_*.md
 *.json
 
+# Test images
+test_png/
+
 # macOS
 .DS_Store
 .AppleDouble
