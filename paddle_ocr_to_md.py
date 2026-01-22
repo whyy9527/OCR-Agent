@@ -97,7 +97,9 @@ def main():
             chunks.append(f"[识别失败: {f.name}]")
 
     # 生成 Markdown 文件
-    md = ("\n\n>>>\n\n").join(chunks).strip() + "\n"
+    md = ("\n\n>>>\n\n").join(chunks).strip()
+    # 在开头和结尾添加指定行
+    md = "<参照持仓文件格式和锚点，生成今日持仓文件>\n\n" + md + "\n\n<参照持仓文件格式和锚点，生成今日持仓文件>"
     Path(out_md).write_text(md, encoding='utf-8')
 
     print(f"\n✓ 完成！已保存到: {out_md}")
