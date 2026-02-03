@@ -6,10 +6,10 @@
 
 ```bash
 # 处理图片（中文）
-./run_paddle_ocr.sh test_png output.md ch
+./run_paddle_ocr.sh images output.md ch
 
 # 处理图片（英文）
-./run_paddle_ocr.sh images/ output.md en
+./run_paddle_ocr.sh images output.md en
 
 # 处理图片并清理噪声
 ./run_clean_ocr.sh test.md
