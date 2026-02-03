@@ -10,6 +10,9 @@
 
 # 处理图片（英文）
 ./run_paddle_ocr.sh images/ output.md en
+
+# 处理图片并清理噪声
+./run_clean_ocr.sh test.md
 ```
 
 ## 文件说明
@@ -47,6 +50,7 @@
 OCR 识别后的原始文本会混入大量噪声（状态栏、按钮、图表刻度、新闻标题等），`clean_ocr.py` 负责清理。它使用 DeepSeek-chat 做噪声判断，在 `paddle_ocr_to_md.py` 的流水线中自动调用，也可以单独对已有的 md 文件跑清理。
 
 需要设置环境变量：
+
 ```bash
 export DEEPSEEK_API_KEY="your-key-here"
 ```
