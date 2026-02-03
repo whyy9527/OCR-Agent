@@ -11,7 +11,10 @@
 # 处理图片（英文）
 ./run_paddle_ocr.sh images output.md en
 
-# 处理图片并清理噪声
+# 跳过清理步骤（查看原始 OCR 输出）
+./run_paddle_ocr.sh --skip-clean images output_raw.md ch
+
+# 单独清理已有的 md 文件
 ./run_clean_ocr.sh test.md
 ```
 
@@ -47,7 +50,7 @@
 
 ## clean_ocr.py — OCR 噪声清理
 
-OCR 识别后的原始文本会混入大量噪声（状态栏、按钮、图表刻度、新闻标题等），`clean_ocr.py` 负责清理。它使用 DeepSeek-chat 做噪声判断，在 `paddle_ocr_to_md.py` 的流水线中自动调用，也可以单独对已有的 md 文件跑清理。
+OCR 识别后的原始文本会混入大量噪声（状态栏、按钮、图表刻度、新闻标题等），`clean_ocr.py` 负责清理。它使用 DeepSeek 做噪声判断，在 `paddle_ocr_to_md.py` 的流水线中自动调用，也可以单独对已有的 md 文件跑清理。清理后还会进行程序化数据校验，确保特定噪声模式被可靠删除。
 
 需要设置环境变量：
 

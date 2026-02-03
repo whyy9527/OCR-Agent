@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-OCR 噪声清理模块（DeepSeek-chat）
+OCR 噪声清理模块（DeepSeek）
 
 对基金 APP 截图 OCR 后的原始文本做噪声清理。
-每个 chunk 发给 DeepSeek-chat，返回去噪后的纯文本（不做结构化）。
+每个 chunk 发给 DeepSeek，返回去噪后的纯文本（不做结构化）。
+清理后进行数据校验。
 
 单独使用：
     python3 clean_ocr.py <输入.md> [输出.md]
@@ -19,6 +20,7 @@ OCR 噪声清理模块（DeepSeek-chat）
 
 import os
 import sys
+import re
 from pathlib import Path
 from openai import OpenAI
 
@@ -57,19 +59,23 @@ _PROMPT = """\
 - 单独的短数字残片：单独一行只有 -2 这种负号+1~2位整数
 - 单独的 "说明：" 行
 - 末尾时间戳：如 "2026年2月3日 16:55" 这种日期+时间格式
+- 营销文案：如 "未配置，26年想省税第一波..."
+- 功能入口：持仓透视、我的定投、交易记录、持仓检视
+- 新闻标题：如 "2025年四季报出炉|易方达主动权益投资业绩亮眼"
+- 解读（单独一行时）
+- 银行卡尾号信息：银行卡尾号、尾号XXXX等
 
 需要保留的数据（注意不要误删）：
 - 基金名称、基金代码（6位数字）
 - 金额、净值、成本价、份额等数值
 - 昨日收益、持仓收益、持仓收益率
-- 在途资金、可用份额、日涨幅、最新净值、持仓成本价、银行卡尾号
+- 在途资金、可用份额、日涨幅、最新净值、持仓成本价
 - 实时估值（如 实时估值+1.49%）
 - 业绩指标值（紧跟指标名后面的百分比，如 "本基金" 后面的 -1.17%）
 - N个进行中定投计划、N笔交易进行中
 - 定投金额（如 定投10.00元）
 - 该基金暂不能申购
-- 我的定投、交易记录、持仓检视（功能入口，保留）
-- 尾号8901、持仓透视、总金额等账户信息
+- 总金额等账户信息
 
 允许做的行内小修正：
 - "金额（元）0" → "金额（元）"（去掉尾部多余的 0）
@@ -115,7 +121,59 @@ def clean_chunk(raw: str) -> str:
         temperature=0,
     )
     cleaned = resp.choices[0].message.content.strip()
-    return cleaned if cleaned else raw
+    cleaned = cleaned if cleaned else raw
+
+    # 数据校验
+    cleaned = validate_cleaned_text(cleaned)
+    return cleaned
+
+
+def validate_cleaned_text(text: str) -> str:
+    """对清理后的文本进行数据校验和基本修正"""
+    if not text.strip():
+        return text
+
+    lines = text.strip().split('\n')
+    validated_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # 基本校验规则
+        # 1. 检查是否包含明显的OCR残片（单个字符或乱码）
+        if len(line) == 1 and line in '> < ^ ￥ L □ D ® S · : i 、- 0 夫 大 贝聘 1印 9 日.':
+            continue  # 跳过单个乱码字符
+
+        # 2. 检查是否是纯时间格式（如14:07）
+        if re.match(r'^\d{1,2}[:：]\d{2}$', line):
+            continue
+
+        # 3. 检查是否是纯百分比数字（图表Y轴刻度）
+        if re.match(r'^-?\d+(\.\d{1,3})?%$', line) and len(lines) > 1:
+            # 如果是连续百分比行，可能是图表刻度
+            continue
+
+        # 4. 检查是否是日期格式（如25.12.31）
+        if re.match(r'^\d{2}\.\d{2}\.\d{2}$', line):
+            continue
+
+        # 5. 检查是否是银行卡尾号行
+        if '银行卡尾号' in line or re.match(r'^尾号\d{4}$', line):
+            continue
+
+        # 6. 检查是否是短数字残片（1-3位数字，可能带负号）
+        if re.match(r'^-?\d{1,3}$', line):
+            continue
+
+        validated_lines.append(line)
+
+    # 如果校验后为空，返回原始第一行（避免完全丢失内容）
+    if not validated_lines and lines:
+        return lines[0].strip()
+
+    return '\n'.join(validated_lines)
 
 
 def clean_md(raw_md: str) -> str:
