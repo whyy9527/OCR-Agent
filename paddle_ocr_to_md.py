@@ -10,6 +10,8 @@ from paddleocr import PaddleOCR
 import warnings
 from datetime import datetime
 
+from clean_ocr import clean_chunk
+
 # 忽略 PaddlePaddle 的警告信息
 warnings.filterwarnings('ignore')
 
@@ -89,10 +91,11 @@ def main():
         print(f"[{idx}/{total}] 正在识别: {f.name}")
         try:
             text = ocr_image(ocr, f)
-            chunks.append(text)
-            # 显示前50个字符作为预览
             preview = text[:50].replace('\n', ' ') if text else "(无文字)"
             print(f"           → {preview}...")
+
+            text = clean_chunk(text)
+            chunks.append(text)
         except Exception as e:
             print(f"           ✗ 错误: {e}")
             chunks.append(f"[识别失败: {f.name}]")
