@@ -4,5 +4,6 @@
 # 输出.md 省略时覆盖输入文件
 # 需要设置环境变量: export DEEPSEEK_API_KEY="your-key"
 
-source venv/bin/activate
+source "$(dirname "$0")/../venv/bin/activate"
+cd "$(dirname "$0")"
 python3 clean_ocr.py "$@"

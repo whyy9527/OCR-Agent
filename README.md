@@ -1,88 +1,115 @@
 # OCR-Agent
 
-纯本地 OCR 工具，使用 PaddleOCR 从图片中提取文字。
+纯本地 OCR 工具集，支持两类场景：
+
+| 目录 | 场景 | 说明 |
+|------|------|------|
+| `stock-ocr/` | 手机基金 APP 截图 | PaddleOCR + DeepSeek 持仓噪声清洗 |
+| `pdf-ocr/` | 扫描版 PDF 书籍 | PDF→图片→PaddleOCR + DeepSeek 书籍噪声清洗 |
+
+共用同一个 `venv/` 环境。
+
+---
 
 ## 快速开始
 
+### stock-ocr — 基金截图识别
+
 ```bash
-# 处理图片（中文）
+cd stock-ocr
+
+# 识别 images/ 目录下所有截图（中文）
 ./run_paddle_ocr.sh images output.md ch
 
-# 处理图片（英文）
-./run_paddle_ocr.sh images output.md en
-
-# 跳过清理步骤（查看原始 OCR 输出）
+# 跳过 DeepSeek 清洗，查看原始 OCR 输出
 ./run_paddle_ocr.sh --skip-clean images output_raw.md ch
 
-# 单独清理已有的 md 文件
-./run_clean_ocr.sh test.md
+# 单独对已有 md 文件补跑 DeepSeek 清洗
+./run_clean_ocr.sh output.md output_cleaned.md
 ```
 
-## 文件说明
+### pdf-ocr — 扫描书籍转 Markdown
 
-- `run_paddle_ocr.sh` - OCR 识别脚本 ⭐
-- `run_clean_ocr.sh` - 噪声清理脚本（单独跑清理用）
-- `paddle_ocr_to_md.py` - OCR 主程序（识别 + 清理）
-- `clean_ocr.py` - OCR 噪声清理模块（可独立使用，见下）
-- `PADDLEOCR_GUIDE.md` - 详细文档
-- `validation.md` - 参考示例
-- `test_png/` - 测试图片
-- `venv/` - Python 环境
+```bash
+cd pdf-ocr
 
-## 输出格式
+# 全量转换（PaddleOCR + DeepSeek 清洗）
+./run_pdf_to_md.sh 书名.pdf 书名.md
 
-生成的 Markdown 文件，图片之间用 `>>>` 分隔：
+# 先跳过清洗快速验证识别质量
+./run_pdf_to_md.sh 书名.pdf test.md --skip-clean
 
-```
-<图片1的文字>
+# 只处理指定页范围（测试用）
+./run_pdf_to_md.sh 书名.pdf test.md --pages 1-10 --skip-clean
 
->>>
-
-<图片2的文字>
+# 调整渲染分辨率（默认 200 DPI，越高越慢越清晰）
+./run_pdf_to_md.sh 书名.pdf 书名.md --dpi 250
 ```
 
-## 识别质量
+---
 
-- ✅ 中文识别：95%+ 准确率
-- ✅ 数字金额：99%+ 准确率
-- ✅ 复杂 UI：良好
-- ✅ 完全本地运行
+## 环境配置
 
-## clean_ocr.py — OCR 噪声清理
+### Python 依赖（venv）
 
-OCR 识别后的原始文本会混入大量噪声（状态栏、按钮、图表刻度、新闻标题等），`clean_ocr.py` 负责清理。它使用 DeepSeek 做噪声判断，在 `paddle_ocr_to_md.py` 的流水线中自动调用，也可以单独对已有的 md 文件跑清理。清理后还会进行程序化数据校验，确保特定噪声模式被可靠删除。
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install paddlepaddle paddleocr pymupdf openai
+```
 
-需要设置环境变量：
+### DeepSeek API Key（清洗步骤必须）
 
 ```bash
 export DEEPSEEK_API_KEY="your-key-here"
 ```
 
-**单独对已有 md 文件跑清理：**
-
-```bash
-# 输出到新文件
-python3 clean_ocr.py output.md output_cleaned.md
-
-# 原地覆盖
-python3 clean_ocr.py output.md
-```
-
-**作为模块导入：**
-
-```python
-from clean_ocr import clean_chunk   # 清理单个 chunk（>>> 之间的文本）
-from clean_ocr import clean_md      # 清理整个 md 文本（保留首尾标记行）
-```
-
-**调整清理行为：** 编辑 `clean_ocr.py` 中的 `_PROMPT` 即可修改噪声定义和保留规则。
+使用 `--skip-clean` 可跳过此要求。
 
 ---
 
-## 详细文档
+## 目录结构
 
-查看完整使用指南：
-
-```bash
-cat PADDLEOCR_GUIDE.md
 ```
+OCR-Agent/
+├── venv/                    # Python 虚拟环境（共用）
+│
+├── stock-ocr/               # 基金截图 OCR 流程
+│   ├── paddle_ocr_to_md.py  # 主程序（OCR + 清洗）
+│   ├── clean_ocr.py         # DeepSeek 持仓噪声清洗模块
+│   ├── ocr_worker.py        # JSON bridge worker
+│   ├── run_paddle_ocr.sh    # ⭐ 便捷运行脚本
+│   ├── run_clean_ocr.sh     # 单独补跑清洗
+│   └── validation.md        # 清洗校验参考
+│
+├── pdf-ocr/                 # PDF 书籍 OCR 流程
+│   ├── pdf_to_md.py         # 主程序（PDF→图片→OCR→清洗）
+│   ├── clean_book_ocr.py    # DeepSeek 书籍噪声清洗模块
+│   ├── run_pdf_to_md.sh     # ⭐ 便捷运行脚本
+│   └── test_deepseek_ocr.js # DeepSeek-OCR vs PaddleOCR 对比测试
+│
+└── README.md
+```
+
+---
+
+## 输出格式
+
+两个流程输出的 Markdown 格式相同，页/图片之间用 `>>>` 分隔：
+
+```
+<第1页文字>
+
+>>>
+
+<第2页文字>
+```
+
+---
+
+## 识别质量
+
+- ✅ 中文识别：95%+ 准确率（PaddleOCR PP-OCRv5）
+- ✅ 数字金额：99%+ 准确率
+- ✅ 完全本地运行（OCR 部分）
+- ✅ DeepSeek 清洗去除页码、页眉、扫描噪点
