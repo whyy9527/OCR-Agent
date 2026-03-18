@@ -15,17 +15,30 @@
 
 ### stock-ocr — 基金截图识别
 
+截图按券商分两个子目录存放：
+
+| 目录 | 来源 |
+|------|------|
+| `stock-ocr/images/cmb/` | 招商银行 |
+| `stock-ocr/images/jd/`  | 京东金融 |
+
 ```bash
 cd stock-ocr
 
-# 识别 images/ 目录下所有截图（中文）
-./run_paddle_ocr.sh images output.md ch
+# 识别全部截图（自动按招商银行/京东金融分组，输出含 === 招商银行 === / === 京东金融 === 标题）
+./run_paddle_ocr.sh images output_all.md ch
+
+# 单独识别招商银行截图（无分组标题）
+./run_paddle_ocr.sh images/cmb output_cmb.md ch
+
+# 单独识别京东金融截图（无分组标题）
+./run_paddle_ocr.sh images/jd output_jd.md ch
 
 # 跳过 DeepSeek 清洗，查看原始 OCR 输出
 ./run_paddle_ocr.sh --skip-clean images output_raw.md ch
 
 # 单独对已有 md 文件补跑 DeepSeek 清洗
-./run_clean_ocr.sh output.md output_cleaned.md
+./run_clean_ocr.sh output_all.md output_cleaned.md
 ```
 
 ### pdf-ocr — 扫描书籍转 Markdown
@@ -75,6 +88,9 @@ OCR-Agent/
 ├── venv/                    # Python 虚拟环境（共用）
 │
 ├── stock-ocr/               # 基金截图 OCR 流程
+│   ├── images/              # 截图按券商分目录存放
+│   │   ├── cmb/             # 招商银行截图
+│   │   └── jd/              # 京东金融截图
 │   ├── paddle_ocr_to_md.py  # 主程序（OCR + 清洗）
 │   ├── clean_ocr.py         # DeepSeek 持仓噪声清洗模块
 │   ├── ocr_worker.py        # JSON bridge worker
@@ -85,8 +101,7 @@ OCR-Agent/
 ├── pdf-ocr/                 # PDF 书籍 OCR 流程
 │   ├── pdf_to_md.py         # 主程序（PDF→图片→OCR→清洗）
 │   ├── clean_book_ocr.py    # DeepSeek 书籍噪声清洗模块
-│   ├── run_pdf_to_md.sh     # ⭐ 便捷运行脚本
-│   └── test_deepseek_ocr.js # DeepSeek-OCR vs PaddleOCR 对比测试
+│   └── run_pdf_to_md.sh     # ⭐ 便捷运行脚本
 │
 └── README.md
 ```

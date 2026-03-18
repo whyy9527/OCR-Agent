@@ -83,18 +83,58 @@ def main():
         inputs = args[:-1]
 
     # 收集图片文件
-    img_files = []
+    # 若输入目录下同时存在 cmb/ 和 jd/ 子目录，按招商→京东顺序分组并插入标题
+    SECTION_DIRS = [
+        ("cmb", "招商银行"),
+        ("jd",  "京东金融"),
+    ]
+
+    # 检查是否为"全量"模式：所有 inputs 都是目录，且至少一个包含 cmb/ 或 jd/ 子目录
+    def collect_imgs(p: Path):
+        return sorted([
+            x for x in p.iterdir()
+            if x.is_file() and x.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"]
+        ])
+
+    # 先判断是否触发分组逻辑
+    grouped_sections = []  # list of (label, [Path])
+    use_grouping = False
     for inp in inputs:
         p = Path(inp)
         if p.is_dir():
-            img_files += sorted([
-                x for x in p.rglob("*")
-                if x.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"]
-            ])
-        else:
-            img_files.append(p)
+            sub_names = {d.name for d in p.iterdir() if d.is_dir()}
+            if sub_names & {"cmb", "jd"}:
+                use_grouping = True
+                for key, label in SECTION_DIRS:
+                    sub = p / key
+                    if sub.exists():
+                        grouped_sections.append((label, collect_imgs(sub)))
+                break
 
-    if not img_files:
+    if use_grouping:
+        # 分组模式：每组前插入标题 chunk
+        chunks_with_labels = []  # list of (is_header, label_or_text)
+        for label, files in grouped_sections:
+            chunks_with_labels.append((True, label))
+            for f in files:
+                chunks_with_labels.append((False, f))
+        all_files = [x for is_hdr, x in chunks_with_labels if not is_hdr]
+        total = len(all_files)
+    else:
+        # 普通模式：收集所有图片
+        img_files = []
+        for inp in inputs:
+            p = Path(inp)
+            if p.is_dir():
+                img_files += sorted([
+                    x for x in p.rglob("*")
+                    if x.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"]
+                ])
+            else:
+                img_files.append(p)
+        total = len(img_files)
+
+    if total == 0:
         raise SystemExit("未找到图片文件")
 
     print(f"初始化 PaddleOCR (语言: {lang})...")
@@ -105,22 +145,41 @@ def main():
         print("将使用 deepseek-chat 进行 OCR 文本清理")
 
     chunks = []
-    total = len(img_files)
     print(f"开始处理 {total} 张图片...\n")
 
-    for idx, f in enumerate(img_files, 1):
-        print(f"[{idx}/{total}] 正在识别: {f.name}")
-        try:
-            text = ocr_image(ocr, f)
-            preview = text[:50].replace('\n', ' ') if text else "(无文字)"
-            print(f"           → {preview}...")
-
-            if not skip_clean:
-                text = clean_chunk(text)
-            chunks.append(text)
-        except Exception as e:
-            print(f"           ✗ 错误: {e}")
-            chunks.append(f"[识别失败: {f.name}]")
+    if use_grouping:
+        img_idx = 0
+        for is_header, item in chunks_with_labels:
+            if is_header:
+                chunks.append(f"=== {item} ===")
+                print(f"\n--- {item} ---")
+            else:
+                img_idx += 1
+                f = item
+                print(f"[{img_idx}/{total}] 正在识别: {f.name}")
+                try:
+                    text = ocr_image(ocr, f)
+                    preview = text[:50].replace('\n', ' ') if text else "(无文字)"
+                    print(f"           → {preview}...")
+                    if not skip_clean:
+                        text = clean_chunk(text)
+                    chunks.append(text)
+                except Exception as e:
+                    print(f"           ✗ 错误: {e}")
+                    chunks.append(f"[识别失败: {f.name}]")
+    else:
+        for idx, f in enumerate(img_files, 1):
+            print(f"[{idx}/{total}] 正在识别: {f.name}")
+            try:
+                text = ocr_image(ocr, f)
+                preview = text[:50].replace('\n', ' ') if text else "(无文字)"
+                print(f"           → {preview}...")
+                if not skip_clean:
+                    text = clean_chunk(text)
+                chunks.append(text)
+            except Exception as e:
+                print(f"           ✗ 错误: {e}")
+                chunks.append(f"[识别失败: {f.name}]")
 
     # 生成 Markdown 文件
     md = ("\n\n>>>\n\n").join(chunks).strip()
