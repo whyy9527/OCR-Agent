@@ -13,4 +13,4 @@
 
 source "$(dirname "$0")/../venv/bin/activate"
 cd "$(dirname "$0")"
-python paddle_ocr_to_md.py "$@"
+PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True python paddle_ocr_to_md.py "$@"
