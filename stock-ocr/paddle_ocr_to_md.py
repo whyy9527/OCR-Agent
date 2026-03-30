@@ -22,7 +22,14 @@ def init_ocr(lang='ch'):
     Args:
         lang: 语言，'ch'=中文, 'en'=英文, 'japan'=日文等
     """
-    ocr = PaddleOCR(lang=lang)
+    ocr = PaddleOCR(
+        lang=lang,
+        text_detection_model_name='PP-OCRv5_mobile_det',
+        text_recognition_model_name='PP-OCRv5_mobile_rec',
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+    )
     return ocr
 
 def ocr_image(ocr, img_path: Path) -> str:
