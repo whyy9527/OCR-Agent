@@ -10,6 +10,7 @@ __pycache__/
 output*.md
 test_*.md
 *.json
+pdf-ocr/*.md
 
 # Input PDFs (large files)
 *.pdf
