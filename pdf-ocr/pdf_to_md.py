@@ -2,30 +2,23 @@
 """
 PDF 扫描版书籍转 Markdown
 
-流程：PDF → 每页渲染为图片 → PaddleOCR（中文）→ DeepSeek 书籍噪声清理 → Markdown
+流程：PDF → 每页渲染为图片 → PaddleOCR（中文，PP-OCRv5 mobile）→ Markdown
 
 用法：
-    python3 pdf_to_md.py <input.pdf> <output.md> [--skip-clean] [--dpi 200]
+    python3 pdf_to_md.py <input.pdf> <output.md> [--dpi 200]
 
 参数：
     input.pdf      输入 PDF 文件路径
     output.md      输出 Markdown 文件路径
-    --skip-clean   跳过 DeepSeek 清理，直接输出原始 OCR 文本（用于检查识别质量）
     --dpi N        渲染分辨率，默认 200（越高质量越好但越慢，推荐 150-300）
     --pages A-B    只处理指定页范围，如 --pages 1-10（用于测试）
-
-环境变量（不用 --skip-clean 时必须）：
-    DEEPSEEK_API_KEY
 
 示例：
     # 全量转换
     python3 pdf_to_md.py 起卦秘籍.pdf 起卦秘籍.md
 
-    # 先跳过清理快速出结果看质量
-    python3 pdf_to_md.py 起卦秘籍.pdf 起卦秘籍_raw.md --skip-clean
-
     # 只测试前 10 页
-    python3 pdf_to_md.py 起卦秘籍.pdf test.md --pages 1-10 --skip-clean
+    python3 pdf_to_md.py 起卦秘籍.pdf test.md --pages 1-10
 """
 
 import sys
@@ -36,8 +29,6 @@ from pathlib import Path
 
 import fitz  # pymupdf
 from paddleocr import PaddleOCR
-
-from clean_book_ocr import clean_chunk
 
 warnings.filterwarnings("ignore")
 
@@ -94,9 +85,6 @@ def main():
         print(__doc__)
         sys.exit(1)
 
-    skip_clean = "--skip-clean" in args
-    args = [a for a in args if a != "--skip-clean"]
-
     dpi = 200
     if "--dpi" in args:
         idx = args.index("--dpi")
@@ -129,10 +117,6 @@ def main():
         start, end = 0, total_pages
 
     print(f"PDF: {pdf_path.name}  总页数: {total_pages}  处理范围: {start+1}~{end}")
-    if skip_clean:
-        print("模式: --skip-clean（跳过 DeepSeek 清理）")
-    else:
-        print("模式: 完整流程（PaddleOCR + DeepSeek 书籍清理）")
 
     # 创建临时目录存放图片
     tmp_dir = Path(tempfile.mkdtemp(prefix="pdf_ocr_"))
@@ -141,8 +125,16 @@ def main():
         images = pdf_to_images(pdf_path, tmp_dir, dpi, (start, end))
 
         # Step 2: OCR
-        print(f"\n初始化 PaddleOCR（中文）...")
-        ocr = PaddleOCR(lang="ch")
+        print(f"\n初始化 PaddleOCR（中文，PP-OCRv5 mobile）...")
+        ocr = PaddleOCR(
+            lang="ch",
+            text_detection_model_name='PP-OCRv5_mobile_det',
+            text_recognition_model_name='PP-OCRv5_mobile_rec',
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+        )
+
 
         chunks = []
         total = len(images)
@@ -155,9 +147,6 @@ def main():
                 text = ocr_image(ocr, img_path)
                 preview = text[:40].replace("\n", " ") if text else "(无文字)"
                 print(f"→ {preview}...")
-
-                if not skip_clean and text.strip():
-                    text = clean_chunk(text)
 
                 chunks.append(text)
             except Exception as e:

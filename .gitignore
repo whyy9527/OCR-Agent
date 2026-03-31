@@ -17,6 +17,7 @@ test_*.md
 # Test images
 test_png/
 images/
+*_pages/
 
 # macOS
 .DS_Store
