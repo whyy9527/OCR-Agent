@@ -57,7 +57,14 @@ def run() -> None:
         try:
             from paddleocr import PaddleOCR  # noqa: PLC0415 — lazy import after arg parsing
 
-            ocr = PaddleOCR(lang=lang)
+            ocr = PaddleOCR(
+                lang=lang,
+                text_detection_model_name='PP-OCRv5_mobile_det',
+                text_recognition_model_name='PP-OCRv5_mobile_rec',
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+            )
             results = ocr.predict(input=tmp_path)
 
             text = ""

@@ -4,6 +4,7 @@
 # 示例: ./run_pdf_to_md.sh 起卦秘籍.pdf 起卦秘籍.md
 #       ./run_pdf_to_md.sh 起卦秘籍.pdf test.md --pages 1-10 --skip-clean
 
-source "$(dirname "$0")/../venv/bin/activate"
-cd "$(dirname "$0")"
-python3 pdf_to_md.py "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+VENV_PYTHON="$SCRIPT_DIR/../venv/bin/python3"
+cd "$SCRIPT_DIR"
+"$VENV_PYTHON" pdf_to_md.py "$@"

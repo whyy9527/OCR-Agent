@@ -149,7 +149,7 @@ def main():
     if skip_clean:
         print("注意: 已启用 --skip-clean，将跳过清理步骤")
     else:
-        print("将使用 deepseek-chat 进行 OCR 文本清理")
+        print("将使用 deepseek-v4-flash 进行 OCR 文本清理")
 
     chunks = []
     print(f"开始处理 {total} 张图片...\n")

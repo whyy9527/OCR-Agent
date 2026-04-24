@@ -2,25 +2,30 @@
 """
 PDF 扫描版书籍转 Markdown
 
-流程：PDF → 每页渲染为图片 → PaddleOCR（中文，PP-OCRv5 mobile）→ Markdown
+流程：PDF → 每页渲染为图片 → PaddleOCR（中文，PP-OCRv5 mobile）→ DeepSeek 清洗 → Markdown
 
 用法：
-    python3 pdf_to_md.py <input.pdf> <output.md> [--dpi 200]
+    python3 pdf_to_md.py <input.pdf> <output.md> [--dpi 200] [--skip-clean]
 
 参数：
     input.pdf      输入 PDF 文件路径
     output.md      输出 Markdown 文件路径
     --dpi N        渲染分辨率，默认 200（越高质量越好但越慢，推荐 150-300）
     --pages A-B    只处理指定页范围，如 --pages 1-10（用于测试）
+    --skip-clean   跳过 DeepSeek 清洗步骤
+
+环境变量：
+    DEEPSEEK_API_KEY  (清洗步骤必须，--skip-clean 可跳过)
 
 示例：
     # 全量转换
     python3 pdf_to_md.py 起卦秘籍.pdf 起卦秘籍.md
 
-    # 只测试前 10 页
-    python3 pdf_to_md.py 起卦秘籍.pdf test.md --pages 1-10
+    # 只测试前 10 页，跳过清洗
+    python3 pdf_to_md.py 起卦秘籍.pdf test.md --pages 1-10 --skip-clean
 """
 
+import os
 import sys
 import tempfile
 import shutil
@@ -29,6 +34,8 @@ from pathlib import Path
 
 import fitz  # pymupdf
 from paddleocr import PaddleOCR
+
+from clean_book_ocr import clean_chunk
 
 warnings.filterwarnings("ignore")
 
@@ -97,6 +104,11 @@ def main():
         page_range_str = args[idx + 1]
         args = args[:idx] + args[idx + 2:]
 
+    skip_clean = False
+    if "--skip-clean" in args:
+        skip_clean = True
+        args.remove("--skip-clean")
+
     pdf_path = Path(args[0])
     out_md = Path(args[1])
 
@@ -138,13 +150,18 @@ def main():
 
         chunks = []
         total = len(images)
-        print(f"开始 OCR，共 {total} 张图片...\n")
+        print(f"开始 OCR，共 {total} 张图片...")
+        if not skip_clean:
+            print("OCR 后将使用 DeepSeek 清洗")
+        print()
 
         for idx, img_path in enumerate(images, 1):
             page_num = start + idx
             print(f"[{idx}/{total}] 第 {page_num} 页", end="  ")
             try:
                 text = ocr_image(ocr, img_path)
+                if not skip_clean and text.strip():
+                    text = clean_chunk(text)
                 preview = text[:40].replace("\n", " ") if text else "(无文字)"
                 print(f"→ {preview}...")
 

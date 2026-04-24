@@ -68,7 +68,7 @@ cd pdf-ocr
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install paddlepaddle paddleocr pymupdf openai
+pip install -r requirements.txt
 ```
 
 ### DeepSeek API Key（清洗步骤必须）
@@ -99,9 +99,12 @@ OCR-Agent/
 │   └── validation.md        # 清洗校验参考
 │
 ├── pdf-ocr/                 # PDF 书籍 OCR 流程
-│   ├── pdf_to_md.py         # 主程序（PDF→图片→OCR→清洗）
+│   ├── pdf_to_md.py         # 主程序（PDF→图片→PaddleOCR→DeepSeek清洗）
+│   ├── pdf_to_images.py     # 单独 PDF 切图工具
+│   ├── images_to_md.py      # 图片目录 OCR（不含清洗）
 │   ├── clean_book_ocr.py    # DeepSeek 书籍噪声清洗模块
-│   └── run_pdf_to_md.sh     # ⭐ 便捷运行脚本
+│   ├── run_pdf_to_md.sh     # ⭐ 便捷运行脚本
+│   └── run_once_ocr.sh      # cron 一次性任务脚本
 │
 └── README.md
 ```

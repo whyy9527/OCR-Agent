@@ -27,7 +27,7 @@ from openai import OpenAI
 # ---------------------------------------------------------------------------
 
 _BASE_URL = "https://api.deepseek.com/v1"
-_MODEL = "deepseek-chat"
+_MODEL = "deepseek-v4-flash"
 
 _PROMPT = """\
 你是一个书籍 OCR 结果噪声清理工具。下面是从扫描版书籍 PDF 中 OCR 提取的原始文本。

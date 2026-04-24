@@ -29,7 +29,7 @@ from openai import OpenAI
 # ---------------------------------------------------------------------------
 
 _BASE_URL = "https://api.deepseek.com/v1"
-_MODEL = "deepseek-chat"
+_MODEL = "deepseek-v4-flash"
 
 _PROMPT = """\
 你是一个 OCR 结果噪声清理工具。下面是从手机基金 APP 截图中 OCR 提取的原始文本，里面混杂了噪声。
